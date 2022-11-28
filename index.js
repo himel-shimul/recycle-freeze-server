@@ -85,12 +85,31 @@ async function run(){
             const user = await usersCollection.findOne(query)
             res.send({isSeller : user?.select === 'seller'});
         })
+        app.get('/users/admin/:email', async (req, res) =>{
+            const email = req.params.email;
+            const query = { email: email}
+            const user = await usersCollection.findOne(query)
+            res.send({isAdmin : user?.select === 'admin'});
+        })
 
         app.post('/users', async (req, res) =>{
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             res.send(result);
         });
+
+        app.put('/user/admin/:id', async (req, res) =>{
+            const id = req.params.id;
+            const filter = {_id: ObjectId(id)};
+            const options = {upsert: true};
+            const updatedDoc = {
+                $set:{
+                    status: 'admin'
+                }
+            }
+            const result = await usersCollection.updateOne(filter,updatedDoc, options);
+            res.send(result);
+        })
 
         app.get('/myProducts', async (req, res) =>{
             let query = {};
@@ -102,6 +121,13 @@ async function run(){
             const cursor = allProducts.find(query);
             const products = await cursor.toArray();
             res.send(products);
+        });
+
+        app.delete('/allProducts/:id', async (req, res) =>{
+            const id = req.params.id;
+            const filter = {_id: ObjectId(id)}
+            const result = await allProducts.deleteOne(filter);
+            res.send(result);
         })
     }
     finally{
