@@ -73,18 +73,20 @@ async function run(){
             res.send({accessToken: 'token'})
         })
 
+        
         app.get('/users', async (req, res) =>{
             const query = {};
             const users = await usersCollection.find(query).toArray();
             res.send(users);
         });
-
+        
         app.get('/users/seller/:email', async (req, res) =>{
             const email = req.params.email;
             const query = { email: email}
             const user = await usersCollection.findOne(query)
             res.send({isSeller : user?.select === 'seller'});
-        })
+        });
+
         app.get('/users/admin/:email', async (req, res) =>{
             const email = req.params.email;
             const query = { email: email}
@@ -92,11 +94,60 @@ async function run(){
             res.send({isAdmin : user?.select === 'admin'});
         })
 
+
+
+        app.get('/sellers', async (req, res) =>{
+            // const seller = req.params.seller;
+            const query = {select: "seller"};
+            const users = await usersCollection.find(query).toArray();
+            res.send(users);
+        });
+
+        app.delete('/sellers/:id', async (req, res) =>{
+            const id = req.params.id;
+            const filter = {_id: ObjectId(id)}
+            const result = await usersCollection.deleteOne(filter);
+            res.send(result);
+        })
+        
+        app.get('/buyers', async (req, res) =>{
+            // const seller = req.params.seller;
+            const query = {select: "buyer"};
+            const users = await usersCollection.find(query).toArray();
+            res.send(users);
+        });
+
+        app.delete('/buyers/:id', async (req, res) =>{
+            const id = req.params.id;
+            const filter = {_id: ObjectId(id)}
+            const result = await usersCollection.deleteOne(filter);
+            res.send(result);
+        })
+        
         app.post('/users', async (req, res) =>{
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             res.send(result);
         });
+
+        app.get('/advertise', async(req, res) =>{
+            const query = {state: 'advertise'};
+            const adProducts = await allProducts.find(query).toArray();
+            res.send(adProducts);
+        })
+
+        app.put('/advertise/:id', async (req, res) =>{
+            const id = req.params.id;
+            const filter = {_id: ObjectId(id)};
+            const option = {upsert: true};
+            const updatedDoc = {
+                $set:{
+                    state: 'advertise'
+                }
+            }
+            const result = await allProducts.updateOne(filter, updatedDoc, option);
+            res.send(result)
+        })
 
         app.put('/user/admin/:id', async (req, res) =>{
             const id = req.params.id;
