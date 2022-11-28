@@ -90,6 +90,18 @@ async function run(){
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             res.send(result);
+        });
+
+        app.get('/myProducts', async (req, res) =>{
+            let query = {};
+            if(req.query.email){
+                query = {
+                    email: req.query.email
+                }
+            }
+            const cursor = allProducts.find(query);
+            const products = await cursor.toArray();
+            res.send(products);
         })
     }
     finally{
