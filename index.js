@@ -1,15 +1,16 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
-const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const app = express();
 
-
+// middleware
 app.use(cors());
 app.use(express.json());
+
 
 
 
@@ -17,10 +18,28 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 // console.log(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+function verifyJWT(req, res, next){
+    console.log('token inside verify', req.headers.authorization);
+    const authHeader =  req.headers.authorization;
+    if(!authHeader){
+        return res.status(401).send('unauthorized access')
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, function(err, decoded){
+        if(err){
+            return res.status(403).send({message: 'forbidden access'})
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
+
+
 async function run(){
     try{
         const categories = client.db('recycleFreeze').collection('categories');
         const allProducts = client.db('recycleFreeze').collection('allProducts');
+        const soldPd = client.db('recycleFreeze').collection('soldPD');
         const soldProductsCollection = client.db('recycleFreeze').collection('soldProducts');
         const usersCollection = client.db('recycleFreeze').collection('users');
 
@@ -54,14 +73,18 @@ async function run(){
         app.post('/soldProducts', async (req, res) =>{
             const soldProduct = req.body;
             console.log(soldProduct);
-            const result = await soldProductsCollection.insertOne(soldProduct);
+            const result = await soldPd.insertOne(soldProduct);
             res.send(result);
         });
         
-        app.get('/soldProducts', async (req, res) =>{
+        app.get('/soldProducts',verifyJWT, async (req, res) =>{
             const email = req.query.email;
+            const decodedEmail = req.decoded.email;
+            if(email !== decodedEmail){
+                return res.status(403).send({message: 'forbidden access'})
+            }
             const query = {email: email};
-            const soldProducts = await soldProductsCollection.find(query).toArray();
+            const soldProducts = await soldPd.find(query).toArray();
             res.send(soldProducts);
         });
 
@@ -69,8 +92,11 @@ async function run(){
             const email = req.query.email;
             const query = { email : email};
             const user = await usersCollection.findOne(query);
-            console.log(user);
-            res.send({accessToken: 'token'})
+            if(user){
+                const token = jwt.sign({email}, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
+                return res.send({accessToken: token})
+            }
+            res.status(403).send({accessToken: ''});
         })
 
         
@@ -123,6 +149,17 @@ async function run(){
             const result = await usersCollection.deleteOne(filter);
             res.send(result);
         })
+
+        // app.get('/jwt', async(req, res) =>{
+        //     const email = req.query.email;
+        //     const query = {email: email}
+        //     const user = await usersCollection.findOne(query);
+        //     if(user){
+        //         const token = jwt.sign({email}, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
+        //         return res.send({accessToken: token})
+        //     }
+        //     res.status(403).send({accessToken: ''});
+        // })
         
         app.post('/users', async (req, res) =>{
             const user = req.body;
