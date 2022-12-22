@@ -19,7 +19,7 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 function verifyJWT(req, res, next){
-    console.log('token inside verify', req.headers.authorization);
+    // console.log('token inside verify', req.headers.authorization);
     const authHeader =  req.headers.authorization;
     if(!authHeader){
         return res.status(401).send('unauthorized access')
